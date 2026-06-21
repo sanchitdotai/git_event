@@ -1,0 +1,40 @@
+﻿name: Validate and Auto Merge Pull Request
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate-and-merge:
+    name: Validate title and auto merge
+    if: ${{ github.event.pull_request.head.ref != 'main' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          REQUIRED_WORD: CollabWithSanchit
+        run: |
+          if [[ "$PR_TITLE" != *"$REQUIRED_WORD"* ]]; then
+            echo "::error title=Invalid pull request title::PR title must contain the exact case-sensitive word: $REQUIRED_WORD"
+            exit 1
+          fi
+
+          echo "PR title contains $REQUIRED_WORD."
+
+      - name: Merge pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr merge "$PR_URL" --merge --delete-branch
